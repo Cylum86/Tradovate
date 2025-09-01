@@ -14,6 +14,7 @@ class sethlement {
         //IB
         this.ibHigh = null;
         this.ibLow = null;
+        this.lastVWAPResetDate = null;
 
 
         // Parse hardcoded text
@@ -40,22 +41,27 @@ class sethlement {
         const minute = timestamp.getMinutes();
         const price = d.close();
 
+        const currentDate = timestamp.toDateString();
 
-        if (hour === this.props.NYOHour && minute === this.props.NYOMinute) { //Cash Open
-            this.nyoPrice = d.open();// update NYO price
-            //reset IB
+
+        if (
+            hour === this.props.NYOHour &&
+            minute === this.props.NYOMinute &&
+            this.lastVWAPResetDate !== currentDate
+        ) {
+            this.nyoPrice = d.open(); // Update NYO
             this.nyoTimestamp = timestamp;
             this.nyoIndex = d.index();
             this.ibHigh = null;
             this.ibLow = null;
-
-
-            // Reset VWAP accumulation
+        
+            // Reset VWAP
             this.volumeSum = 0;
             this.volumePriceSum = 0;
-
-
-        }  
+        
+            // Mark reset done for today
+            this.lastVWAPResetDate = currentDate;
+        }
 
 
         // At exactly 1 hour later: calculate IBH and IBL
