@@ -3,8 +3,8 @@ const { px, du, op } = require("./tools/graphics");
 
 
 const defaultLevelText =
-"PDH, 23762\nPDC, 23473.25\npNH, 23668\npNL PDL, 23397.5\nGX H, 23552.5\nGX L, 23370.5\nBB H, 24047.75\nBB L, 23117\nD20, 23582.5\nD5, 23589.75\nMT H, 23616.25\nMT L, 23371.5\nyVAH, 23490.5\nyPOC, 23450.5\nyVAL, 23427.25\nPW VAH, 23611.5\nPW POC, 23543.25\nPW VAL, 23438.5\nPW H, 23803.75\nPW L, 23370.5\nPM H, 24068.5\nPM L, 22774.75\nW33 VA L, 23757.25\nW33 POC, 23933.75\nW33 VA H, 23968"
-    ;
+"PDH, 23762\nPDC, 23473.25\npNH, 23668\npNL PDL, 23397.5\nGX H, 23552.5\nGX L /PWL/PML, 23370.5\nBB H, 24047.75\nBB L, 23117\nD20, 23582.5\nD5, 23589.75\nMT H, 23616.25\nyVAH, 23490.5\nyPOC, 23450.5\nyVAL, 23427.25\nPW VAH, 23611.5\nPW POC, 23543.25\nPW VAL, 23438.5\nPW H, 23803.75\nPM H, 24068.5\nPM L, 22774.75\nW33 VA L, 23757.25\nW33 POC, 23933.75\nW33 VA H, 23968"
+;
 
 
 class sethlement {
@@ -115,6 +115,26 @@ class sethlement {
 
        
         if (d.isLast()) {
+            //Static Labels
+            for (const level of this.levels) {
+                items.push({
+                    tag: 'Text',
+                    key: `label-${level.label}-${level.price}`,
+                    point: {
+                        x: du(d.index() + 10),
+                        y: du(level.price)
+                    },
+                    text: `${level.label} ${level.price}`,
+                    style: {
+                        fontSize: 12,
+                        fontWeight: "bold",
+                        fill: "#FFD700"
+                    },
+                    textAlignment: "rightMiddle",
+                    global: true
+                });
+            }
+
             //NYO
             if (this.nyoPrice !== null) {
                 items.push({
@@ -172,28 +192,6 @@ class sethlement {
                 });
             }
 
-
-
-
-            //Static Labels
-            for (const level of this.levels) {
-                items.push({
-                    tag: 'Text',
-                    key: `label-${level.label}-${level.price}`,
-                    point: {
-                        x: du(d.index() + 10),
-                        y: du(level.price)
-                    },
-                    text: `${level.label} ${level.price}`,
-                    style: {
-                        fontSize: 12,
-                        fontWeight: "bold",
-                        fill: "#FFD700"
-                    },
-                    textAlignment: "rightMiddle",
-                    global: true
-                });
-            }
         }
 
 
@@ -224,10 +222,3 @@ module.exports = {
         dark: { vwapLine: predef.styles.plot({ color: "#6699FF"})}
     }
 };
-
-
-
-
-
-
-
