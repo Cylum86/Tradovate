@@ -3,7 +3,7 @@ const { px, du, op } = require("./tools/graphics");
 
 
 const defaultLevelText =
-"PDH, 23762\nPDC, 23473.25\npNH, 23668\npNL PDL, 23397.5\nGX H, 23552.5\nGX L /PWL/PML, 23370.5\nBB H, 24047.75\nBB L, 23117\nD20, 23582.5\nD5, 23589.75\nMT H, 23616.25\nyVAH, 23490.5\nyPOC, 23450.5\nyVAL, 23427.25\nPW VAH, 23611.5\nPW POC, 23543.25\nPW VAL, 23438.5\nPW H, 23803.75\nPM H, 24068.5\nPM L, 22774.75\nW33 VA L, 23757.25\nW33 POC, 23933.75\nW33 VA H, 23968";
+"PDH/Mon.H, 23552.5\nPDLTue.L, 23027\nPDC, 23277\nyNYH, 23509.5\nyNYL, 23060.25\nBB H, 24049.5\nBB L, 23113\nD20, 23581.25\nyVAH, 23256\nyPOC, 23211.25\nyVAL, 23106.5\nPW VAH, 23611.5\nPW POC / D5, 23543.25\nPW VAL, 23438.5\nPW H, 23803.75\nPW L /W35-1 Tue.L, 23370.5\nPM H, 24068.5\nPM L, 22774.75\nW33 VA L, 23757.25\nW33 POC, 23933.75\nW33 VA H, 23968";
 
 
 class sethlement {
@@ -223,10 +223,3 @@ module.exports = {
         dark: { vwapLine: predef.styles.plot({ color: "#6699FF"})}
     }
 };
-
-
-
-
-
-
-
