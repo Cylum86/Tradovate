@@ -21,20 +21,28 @@ class FZTMomo {
     }
 }
 
+// Build schemeStyles by merging dark/light per-plot maps
+const s13 = predef.styles.solidLine("ema13", "#9B9B9B"); // gray
+const s21 = predef.styles.solidLine("ema21", "#50E3C2"); // teal
+const s34 = predef.styles.solidLine("ema34", "#7A92F5"); // blue
+
+const schemeStyles = {
+    dark: { ...s13.dark, ...s21.dark, ...s34.dark },
+    light: { ...s13.light, ...s21.light, ...s34.light }
+};
+
 module.exports = {
     name: "FZT momo",
     description: "FZT momo",
     calculator: FZTMomo,
     params: {},
-    plots:{
+    plots: {
         ema13: { title: "ema13" },
         ema21: { title: "ema21" },
         ema34: { title: "ema34" }
-    }
+    },
+    // Optional: render as a grouped multiline plot
+    // plotter: predef.plotters.multiline(["ema13", "ema21", "ema34"]),
     tags: ["FZT"],
-    schemeStyles: {
-        ema13: predef.styles.solidLine("#9B9B9B"), // gray
-        ema21: predef.styles.solidLine("#50E3C2"), // teal
-        ema34: predef.styles.solidLine("#7A92F5")  // blue
-    }
+    schemeStyles
 };
