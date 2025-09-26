@@ -3,7 +3,7 @@ const { px, du, op } = require("./tools/graphics");
 
 
 const defaultLevelText =
-"PDH/Mon.H, 23552.5\nPDLTue.L, 23027\nPDC, 23277\nyNYH, 23509.5\nyNYL, 23060.25\nBB H, 24049.5\nBB L, 23113\nD20, 23581.25\nyVAH, 23256\nyPOC, 23211.25\nyVAL, 23106.5\nPW VAH, 23611.5\nPW POC / D5, 23543.25\nPW VAL, 23438.5\nPW H, 23803.75\nPW L /W35-1 Tue.L, 23370.5\nPM H, 24068.5\nPM L, 22774.75\nW33 VA L, 23757.25\nW33 POC, 23933.75\nW33 VA H, 23968";
+"PDH , 24913.5\nPDL / yNYL, 24627\nPDC, 24831.5\nyNYH, 24899.25\nGX H, 24793.5\nGX L , 24694.25\nBB H, 25131\nBB L, 23456\nD20, 24293\nD5, 24797\nyVAH, 24800.75\nyPOC , 24724.5\nyVAL, 24630\nMon.H ETH/RTH, 25027.25\nMon.L, 24748.75\nPDL / Tue.L - RTH, 24780.5\nMon.L - RTH, 24814.25\nPW VAH, 24742\nPW POC, 24537\nPW VAL, 24322.75\nPW H, 24888\nPW L , 24242";
 
 
 class sethlement {
@@ -52,17 +52,19 @@ class sethlement {
             // Reset VWAP accumulation
             this.volumeSum = 0;
             this.volumePriceSum = 0;
-
-
         }  
 
 
         // At exactly 1 hour later: calculate IBH and IBL
+       /*
        if (
             this.nyoTimestamp &&
             timestamp.getTime() - this.nyoTimestamp.getTime() >= 60 * 60 * 1000 &&
             this.ibHigh === null
         ) {
+        */
+           
+        if ( hour === ((this.props.NYOHour + 1) % 24) && minute === this.props.NYOMinute) {
             const currentIndex = d.index();
             const bars = [];
 
@@ -180,7 +182,7 @@ class sethlement {
                     tag: 'Text',
                     key: `label-${level.label}-${level.price}`,
                     point: {
-                        x: du(d.index() + 10),
+                        x: du(d.index() + this.props.LabelOffset),
                         y: du(level.price)
                     },
                     text: `${level.label} ${level.price}`,
@@ -210,7 +212,8 @@ module.exports = {
     calculator: sethlement,
     params: {
         NYOHour: predef.paramSpecs.number(21, 1, 0),
-        NYOMinute: predef.paramSpecs.number(30, 1, 0)
+        NYOMinute: predef.paramSpecs.number(30, 1, 0),
+        LabelOffset: predef.paramSpecs.number(50, 1, 0)
     },
     tags: ["C"],
     plots: {
