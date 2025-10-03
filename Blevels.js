@@ -55,15 +55,7 @@ class sethlement {
         }  
 
 
-        // At exactly 1 hour later: calculate IBH and IBL
-       /*
-       if (
-            this.nyoTimestamp &&
-            timestamp.getTime() - this.nyoTimestamp.getTime() >= 60 * 60 * 1000 &&
-            this.ibHigh === null
-        ) {
-        */
-           
+        // At exactly 1 hour later: calculate IBH and IBL           
         if ( hour === ((this.props.NYOHour + 1) % 24) && minute === this.props.NYOMinute) {
             const currentIndex = d.index();
             const bars = [];
