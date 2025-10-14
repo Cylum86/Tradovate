@@ -3,7 +3,7 @@ const { px, du, op } = require("./tools/graphics");
 
 
 const defaultLevelText =
-"PDH , 24913.5\nPDL / yNYL, 24627\nPDC, 24831.5\nyNYH, 24899.25\nGX H, 24793.5\nGX L , 24694.25\nBB H, 25131\nBB L, 23456\nD20, 24293\nD5, 24797\nyVAH, 24800.75\nyPOC , 24724.5\nyVAL, 24630\nMon.H ETH/RTH, 25027.25\nMon.L, 24748.75\nPDL / Tue.L - RTH, 24780.5\nMon.L - RTH, 24814.25\nPW VAH, 24742\nPW POC, 24537\nPW VAL, 24322.75\nPW H, 24888\nPW L , 24242";
+"PWH, 25394\nPDH / yNH / yVAH, 25388\nBBH, 25378.5\nPW VAH, 25366\nyPOC, 25336.75\nPDO, 25287.75\nW41Tue.H(E), 25275\nW41Tue.H(R), 25264.75\nPW POC, 25225.25\nPW VAL / D5, 25047.75\nPMH, 25027.25\nPWO, 25000\nGX H, 24945.75\nW41.Tue.L, 24984.75\nPMC, 24901.75\nD20, 24856.75\nGX L, 24756.25\nyVAL, 24680.25\nPDC / PWC, 24397\nBBL, 24335\nPDL / yNL / PWL, 24158.5\nPMO, 23720.5\nPML, 23266.75";
 
 
 class sethlement {
@@ -158,7 +158,7 @@ class sethlement {
                     tag: 'Text',
                     key: `label-NYVWAP`,
                     point: { x: du(d.index() + 10), y: du(vwap) },
-                    text: `NYVWAP ${vwap.toFixed(2)}`,
+                    text: `NY ${vwap.toFixed(2)}`,
                     style: { fontSize: 12, fontWeight: "bold", fill: "#6699FF" },
                     textAlignment: "rightMiddle",
                     global: true
