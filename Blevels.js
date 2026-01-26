@@ -5,6 +5,10 @@ const { px, du, op } = require("./tools/graphics");
 const defaultLevelText =
 "PMH, 26120.25\nBBH, 26098.75\nPWH, 26045.5\nPW VAH, 26016.5\nPWO, 25949\nPW POC, 25884.75\nPDH, 25739.75\nGX H / yNH / PMO, 25731.75\nyVAH, 25713\nPW VAL, 25703\nPWC / D20, 25691.25\nyPOC, 25673.25\nPDC, 25658.25\nyVAL, 25614\nGX L, 25540.25\nyNL, 25536.75\nD5 / PDO, 25530.75\nPDL, 25483.75\nWEH, 25471\nPMC, 25456.75\nPWL, 25420.75\nBBL, 25283.75\nWEL, 25095.25\nPML, 24887.75";
 
+// Constants
+const IB_PERIOD_MINUTES = 60;
+const TYPICAL_PRICE_DIVISOR = 3;
+
 
 class sethlement {
     init() {
@@ -37,7 +41,6 @@ class sethlement {
         const timestamp = d.timestamp();
         const hour = timestamp.getHours();
         const minute = timestamp.getMinutes();
-        const price = d.close();
 
 
         if (hour === this.props.NYOHour && minute === this.props.NYOMinute) { //Cash Open
@@ -57,7 +60,6 @@ class sethlement {
 
         // At exactly 1 hour later: calculate IBH and IBL           
         if ( hour === ((this.props.NYOHour + 1) % 24) && minute === this.props.NYOMinute) {
-            const currentIndex = d.index();
             const bars = [];
 
 
@@ -71,7 +73,7 @@ class sethlement {
                 const delta = (timestamp - ts) / 60000; // minutes ago
 
 
-                if (delta <= 60) {
+                if (delta <= IB_PERIOD_MINUTES) {
                     bars.push(bar);
                 } else {
                     break;
@@ -92,7 +94,7 @@ class sethlement {
         //AVWAP
         //Accumulate
         const vol = d.volume();
-        const typical = (d.high() + d.low() + d.close()) / 3;
+        const typical = (d.high() + d.low() + d.close()) / TYPICAL_PRICE_DIVISOR;
 
 
         this.volumeSum = (this.volumeSum || 0) + vol;
@@ -205,7 +207,7 @@ module.exports = {
     params: {
         NYOHour: predef.paramSpecs.number(21, 1, 0),
         NYOMinute: predef.paramSpecs.number(30, 1, 0),
-        LabelOffset: predef.paramSpecs.number(16, 1, 0)
+        LabelOffset: predef.paramSpecs.number(50, 1, 0)
     },
     tags: ["C"],
     plots: {
