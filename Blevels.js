@@ -3,7 +3,7 @@ const { px, du, op } = require("./tools/graphics");
 
 
 const defaultLevelText =
-"PWH, 25394\nPDH / yNH / yVAH, 25388\nBBH, 25378.5\nPW VAH, 25366\nyPOC, 25336.75\nPDO, 25287.75\nW41Tue.H(E), 25275\nW41Tue.H(R), 25264.75\nPW POC, 25225.25\nPW VAL / D5, 25047.75\nPMH, 25027.25\nPWO, 25000\nGX H, 24945.75\nW41.Tue.L, 24984.75\nPMC, 24901.75\nD20, 24856.75\nGX L, 24756.25\nyVAL, 24680.25\nPDC / PWC, 24397\nBBL, 24335\nPDL / yNL / PWL, 24158.5\nPMO, 23720.5\nPML, 23266.75";
+"PMH, 26120.25\nBBH, 26098.75\nPWH, 26045.5\nPW VAH, 26016.5\nPWO, 25949\nPW POC, 25884.75\nPDH, 25739.75\nGX H / yNH / PMO, 25731.75\nyVAH, 25713\nPW VAL, 25703\nPWC / D20, 25691.25\nyPOC, 25673.25\nPDC, 25658.25\nyVAL, 25614\nGX L, 25540.25\nyNL, 25536.75\nD5 / PDO, 25530.75\nPDL, 25483.75\nWEH, 25471\nPMC, 25456.75\nPWL, 25420.75\nBBL, 25283.75\nWEL, 25095.25\nPML, 24887.75";
 
 
 class sethlement {
@@ -205,7 +205,7 @@ module.exports = {
     params: {
         NYOHour: predef.paramSpecs.number(21, 1, 0),
         NYOMinute: predef.paramSpecs.number(30, 1, 0),
-        LabelOffset: predef.paramSpecs.number(50, 1, 0)
+        LabelOffset: predef.paramSpecs.number(16, 1, 0)
     },
     tags: ["C"],
     plots: {
