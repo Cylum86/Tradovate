@@ -1,25 +1,46 @@
 const predef = require("./tools/predef");
 const { px, du, op } = require("./tools/graphics");
 
+// Static price levels - update these as needed
+const defaultLevelText = "PMH, 26120.25\nBBH, 26098.75\nPWH, 26045.5\nPW VAH, 26016.5\nPWO, 25949\nPW POC, 25884.75\nPDH, 25739.75\nGX H / yNH / PMO, 25731.75\nyVAH, 25713\nPW VAL, 25703\nPWC / D20, 25691.25\nyPOC, 25673.25\nPDC, 25658.25\nyVAL, 25614\nGX L, 25540.25\nyNL, 25536.75\nD5 / PDO, 25530.75\nPDL, 25483.75\nWEH, 25471\nPMC, 25456.75\nPWL, 25420.75\nBBL, 25283.75\nWEL, 25095.25\nPML, 24887.75";
 
-const defaultLevelText =
-"PMH, 26120.25\nBBH, 26098.75\nPWH, 26045.5\nPW VAH, 26016.5\nPWO, 25949\nPW POC, 25884.75\nPDH, 25739.75\nGX H / yNH / PMO, 25731.75\nyVAH, 25713\nPW VAL, 25703\nPWC / D20, 25691.25\nyPOC, 25673.25\nPDC, 25658.25\nyVAL, 25614\nGX L, 25540.25\nyNL, 25536.75\nD5 / PDO, 25530.75\nPDL, 25483.75\nWEH, 25471\nPMC, 25456.75\nPWL, 25420.75\nBBL, 25283.75\nWEL, 25095.25\nPML, 24887.75";
-
-// Constants
-const IB_PERIOD_MINUTES = 60;
-const TYPICAL_PRICE_DIVISOR = 3;
+// Configuration constants
+const TYPICAL_PRICE_DIVISOR = 3;  // For HLC/3 typical price calculation
+const MIN_VOLUME_THRESHOLD = 2;  // Minimum volume in last minute to consider market active
+const SESSION_START_HOUR = 7;  // 1800 EST = 07:00 chart time
+const SESSION_START_MINUTE = 0;
+const GX_START_HOUR = 9;  // 2000 EST = 09:00 chart time (next day)
+const GX_START_MINUTE = 0;
+const GX_END_HOUR = 18;  // 0500 EST = 18:00 chart time (next day)
+const GX_END_MINUTE = 0;
 
 
 class sethlement {
     init() {
-        //NYO
+        // New York Open tracking
         this.nyoPrice = null;
-        //IB
+        this.nyoTimestamp = null;
+        this.nyoIndex = null;
+        
+        // Initial Balance range tracking
         this.ibHigh = null;
         this.ibLow = null;
+        this.ibCollecting = false;  // Flag to track if we're in IB period
+        
+        // Yesterday's Initial Balance (preserved until new IB is set)
+        this.yibHigh = null;
+        this.yibLow = null;
+        
+        // Globex range tracking (0800 EST to 1700 EST)
+        this.gxHigh = null;
+        this.gxLow = null;
+        this.gxCollecting = false;  // Flag to track if we're in GX period
+        
+        // Anchored VWAP calculation
+        this.volumeSum = 0;
+        this.volumePriceSum = 0;
 
-
-        // Parse hardcoded text
+        // Parse and store static price levels from configuration
         this.levels = [];
         const lines = defaultLevelText.split('\n');
         for (let line of lines) {
@@ -34,163 +55,274 @@ class sethlement {
         }
     }
 
+    // Helper method to create label graphics objects
+    createLabel(key, index, price, text, color, offset = 10) {
+        return {
+            tag: 'Text',
+            key: key,
+            point: {
+                x: du(index + offset),
+                y: du(price)
+            },
+            text: text,
+            style: {
+                fontSize: 12,
+                fontWeight: "bold",
+                fill: color
+            },
+            textAlignment: "rightMiddle",
+            global: true
+        };
+    }
 
-    map(d,i,history) {
+    // Helper method to format price based on hideDecimals setting
+    formatPrice(price) {
+        if (this.props.HideDecimals) {
+            return Math.floor(price).toString();
+        }
+        return price.toString();
+    }
+
+    // Helper method to format VWAP (always 2 decimals)
+    formatVWAP(price) {
+        if (this.props.HideDecimals) {
+            return Math.floor(price).toString();
+        }
+        return price.toFixed(2);
+    }
+
+    // Helper method to check if market is active by looking at recent volume
+    isMarketActive(currentIndex, history, timestamp) {
+        let totalVolume = 0;
+        const minVolumeThreshold = 2;
+        const lookbackMinutes = 1;
+        
+        for (let j = 0; j < 10; j++) {
+            const bar = history.get(currentIndex - j);
+            if (!bar) break;
+            
+            const barTimestamp = bar.timestamp();
+            const minutesAgo = (timestamp - barTimestamp) / 60000;
+            
+            if (minutesAgo <= lookbackMinutes) {
+                totalVolume += bar.volume();
+            } else {
+                break;
+            }
+        }
+        
+        return totalVolume > minVolumeThreshold;
+    }
+
+    // Convert hour and minute to comparable number (e.g., 9:30 -> 930)
+    timeToNumber(hour, minute) {
+        return +('' + hour + (minute < 10 ? '0' : '') + minute);
+    }
+
+    map(d, i, history) {
         const items = [];
-        //NYO
         const timestamp = d.timestamp();
         const hour = timestamp.getHours();
         const minute = timestamp.getMinutes();
+        const currentIndex = d.index();
 
+        const currentTime = this.timeToNumber(hour, minute);
+        const sessionStartTime = this.timeToNumber(SESSION_START_HOUR, SESSION_START_MINUTE);
+        const nyoTime = this.timeToNumber(this.props.NYOHour, this.props.NYOMinute);
+        const ibEndTime = this.timeToNumber((this.props.NYOHour + 1) % 24, this.props.NYOMinute);
+        const gxStartTime = this.timeToNumber(GX_START_HOUR, GX_START_MINUTE);
+        const gxEndTime = this.timeToNumber(GX_END_HOUR, GX_END_MINUTE);
 
-        if (hour === this.props.NYOHour && minute === this.props.NYOMinute) { //Cash Open
-            this.nyoPrice = d.open();// update NYO price
-            //reset IB
-            this.nyoTimestamp = timestamp;
-            this.nyoIndex = d.index();
-            this.ibHigh = null;
-            this.ibLow = null;
+        // Get prior bar for transition detection
+        let priorTime = null;
+        if (history.prior()) {
+            const priorTimestamp = history.prior().timestamp();
+            const priorHour = priorTimestamp.getHours();
+            const priorMinute = priorTimestamp.getMinutes();
+            priorTime = this.timeToNumber(priorHour, priorMinute);
+        }
 
+        // Detect GX start transition (0800 EST / 21:00 chart time)
+        if (priorTime !== null && priorTime < gxStartTime && currentTime >= gxStartTime) {
+            // Start collecting GX data
+            this.gxCollecting = true;
+            this.gxHigh = d.high();
+            this.gxLow = d.low();
+        }
 
-            // Reset VWAP accumulation
-            this.volumeSum = 0;
-            this.volumePriceSum = 0;
-        }  
-
-
-        // At exactly 1 hour later: calculate IBH and IBL           
-        if ( hour === ((this.props.NYOHour + 1) % 24) && minute === this.props.NYOMinute) {
-            const bars = [];
-
-
-            //collect bars in the last 60 mins
-            for (let j = 1; j <= i; j++) {
-                const bar = history.get(i - j); // look back from current index
-                if (!bar) break;
-
-
-                const ts = bar.timestamp();
-                const delta = (timestamp - ts) / 60000; // minutes ago
-
-
-                if (delta <= IB_PERIOD_MINUTES) {
-                    bars.push(bar);
-                } else {
-                    break;
-                }
+        // During GX period, continuously update high/low
+        if (this.gxCollecting) {
+            if (d.high() > this.gxHigh) {
+                this.gxHigh = d.high();
             }
-
-
-
-
-            //Record the high and low of the range
-            if (bars.length > 0) {
-                this.ibHigh = Math.max(...bars.map(b => b.high()));
-                this.ibLow = Math.min(...bars.map(b => b.low()));
+            if (d.low() < this.gxLow) {
+                this.gxLow = d.low();
             }
         }
 
+        // Detect GX end transition (1700 EST / 06:00 chart time)
+        if (priorTime !== null && priorTime < gxEndTime && currentTime >= gxEndTime) {
+            // Stop collecting GX data
+            this.gxCollecting = false;
+        }
 
-        //AVWAP
-        //Accumulate
+        // Detect session start transition (1800 EST / 07:00 chart time)
+        if (priorTime !== null && priorTime < sessionStartTime && currentTime >= sessionStartTime) {
+            // Move current IB to yesterday's IB if it exists
+            if (this.ibHigh !== null && this.ibLow !== null) {
+                this.yibHigh = this.ibHigh;
+                this.yibLow = this.ibLow;
+                this.ibHigh = null;
+                this.ibLow = null;
+            }
+        }
+
+        // Detect NYO transition (09:30 EST / 22:30 chart time)
+        if (priorTime !== null && priorTime < nyoTime && currentTime >= nyoTime) {
+            const marketActive = this.isMarketActive(currentIndex, history, timestamp);
+            
+            // Always capture NYO
+            this.nyoPrice = d.open();
+            this.nyoTimestamp = timestamp;
+            this.nyoIndex = currentIndex;
+            
+            // Start collecting IB data
+            this.ibCollecting = true;
+            this.ibHigh = d.high();
+            this.ibLow = d.low();
+            
+            // Only reset VWAP if market is active
+            if (marketActive) {
+                this.volumeSum = 0;
+                this.volumePriceSum = 0;
+            }
+        }
+
+        // During IB period, continuously update high/low
+        if (this.ibCollecting) {
+            if (d.high() > this.ibHigh) {
+                this.ibHigh = d.high();
+            }
+            if (d.low() < this.ibLow) {
+                this.ibLow = d.low();
+            }
+        }
+
+        // Detect IB end transition (10:30 EST / 23:30 chart time)
+        if (priorTime !== null && priorTime < ibEndTime && currentTime >= ibEndTime) {
+            // Stop collecting IB data
+            this.ibCollecting = false;
+            
+            // Clear yesterday's IB now that we have today's
+            this.yibHigh = null;
+            this.yibLow = null;
+        }
+
+        // Anchored VWAP calculation - accumulate volume and volume-weighted price
         const vol = d.volume();
         const typical = (d.high() + d.low() + d.close()) / TYPICAL_PRICE_DIVISOR;
 
-
         this.volumeSum = (this.volumeSum || 0) + vol;
         this.volumePriceSum = (this.volumePriceSum || 0) + (vol * typical);
-        //Calc
+        
+        // Calculate current VWAP value
         let vwap = null;
         if (this.volumeSum > 0) {
             vwap = this.volumePriceSum / this.volumeSum;
         }
 
-
-
-
-       
+        // Only render labels on the last bar to avoid duplication
         if (d.isLast()) {
-            //NYO
+            // Draw New York Open label
             if (this.nyoPrice !== null) {
-                items.push({
-                    tag: 'Text',
-                    key: `label-NYO`,
-                    point: {
-                        x: du(d.index() + 10),
-                        y: du(this.nyoPrice)
-                    },
-                    text: `NYO ${this.nyoPrice}`,
-                    style: {
-                        fontSize: 12,
-                        fontWeight: "bold",
-                        fill: "#FF6666"
-                    },
-                    textAlignment: "rightMiddle",
-                    global: true
-                });
+                items.push(this.createLabel(
+                    'label-NYO',
+                    currentIndex,
+                    this.nyoPrice,
+                    `NYO ${this.formatPrice(this.nyoPrice)}`,
+                    '#FF6666'
+                ));
             }
-            //IB Labels
+            
+            // Draw Initial Balance High/Low labels (or yesterday's if today's not set yet)
             if (this.ibHigh && this.ibLow) {
-                items.push({
-                    tag: 'Text',
-                    key: 'label-IBH',
-                    point: { x: du(d.index() + 10), y: du(this.ibHigh) },
-                    text: `IBH ${this.ibHigh}`,
-                    style: { fontSize: 12, fontWeight: "bold", fill: "#00FFAA" },
-                    textAlignment: "rightMiddle",
-                    global: true
-                });
+                // Today's IB is set - show current day labels
+                items.push(this.createLabel(
+                    'label-IBH',
+                    currentIndex,
+                    this.ibHigh,
+                    `IBH ${this.formatPrice(this.ibHigh)}`,
+                    this.props.IBColor
+                ));
 
+                items.push(this.createLabel(
+                    'label-IBL',
+                    currentIndex,
+                    this.ibLow,
+                    `IBL ${this.formatPrice(this.ibLow)}`,
+                    this.props.IBColor
+                ));
+            } else if (this.yibHigh && this.yibLow) {
+                // Today's IB not set yet - show yesterday's with "y" prefix
+                items.push(this.createLabel(
+                    'label-yIBH',
+                    currentIndex,
+                    this.yibHigh,
+                    `yIBH ${this.formatPrice(this.yibHigh)}`,
+                    this.props.IBColor
+                ));
 
-                items.push({
-                    tag: 'Text',
-                    key: 'label-IBL',
-                    point: { x: du(d.index() + 10), y: du(this.ibLow) },
-                    text: `IBL ${this.ibLow}`,
-                    style: { fontSize: 12, fontWeight: "bold", fill: "#FF66AA" },
-                    textAlignment: "rightMiddle",
-                    global: true
-                });
+                items.push(this.createLabel(
+                    'label-yIBL',
+                    currentIndex,
+                    this.yibLow,
+                    `yIBL ${this.formatPrice(this.yibLow)}`,
+                    this.props.IBColor
+                ));
             }
 
+            // Draw Globex High/Low labels
+            if (this.gxHigh && this.gxLow) {
+                items.push(this.createLabel(
+                    'label-GXH',
+                    currentIndex,
+                    this.gxHigh,
+                    `GXH ${this.formatPrice(this.gxHigh)}`,
+                    this.props.GXColor
+                ));
 
-            // VWAP Label
+                items.push(this.createLabel(
+                    'label-GXL',
+                    currentIndex,
+                    this.gxLow,
+                    `GXL ${this.formatPrice(this.gxLow)}`,
+                    this.props.GXColor
+                ));
+            }
+
+            // Draw Anchored VWAP label
             if (vwap !== null) {
-                items.push({
-                    tag: 'Text',
-                    key: `label-NYVWAP`,
-                    point: { x: du(d.index() + 10), y: du(vwap) },
-                    text: `NY ${vwap.toFixed(2)}`,
-                    style: { fontSize: 12, fontWeight: "bold", fill: "#6699FF" },
-                    textAlignment: "rightMiddle",
-                    global: true
-                });
+                items.push(this.createLabel(
+                    'label-NYVWAP',
+                    currentIndex,
+                    vwap,
+                    `NY ${this.formatVWAP(vwap)}`,
+                    '#6699FF'
+                ));
             }
 
-
-
-
-            //Static Labels
+            // Draw all static price level labels
             for (const level of this.levels) {
-                items.push({
-                    tag: 'Text',
-                    key: `label-${level.label}-${level.price}`,
-                    point: {
-                        x: du(d.index() + this.props.LabelOffset),
-                        y: du(level.price)
-                    },
-                    text: `${level.label} ${level.price}`,
-                    style: {
-                        fontSize: 12,
-                        fontWeight: "bold",
-                        fill: "#FFD700"
-                    },
-                    textAlignment: "rightMiddle",
-                    global: true
-                });
+                items.push(this.createLabel(
+                    `label-${level.label}-${level.price}`,
+                    currentIndex,
+                    level.price,
+                    `${level.label} ${this.formatPrice(level.price)}`,
+                    '#FFD700',
+                    this.props.LabelOffset
+                ));
             }
         }
-
 
         return {
             graphics: { items },
@@ -205,9 +337,12 @@ module.exports = {
     description: "B Levels desc4",
     calculator: sethlement,
     params: {
-        NYOHour: predef.paramSpecs.number(21, 1, 0),
+        NYOHour: predef.paramSpecs.number(22, 1, 0),
         NYOMinute: predef.paramSpecs.number(30, 1, 0),
-        LabelOffset: predef.paramSpecs.number(50, 1, 0)
+        LabelOffset: predef.paramSpecs.number(50, 1, 0),
+        HideDecimals: predef.paramSpecs.bool(true),
+        IBColor: predef.paramSpecs.color('#00FFAA'),
+        GXColor: predef.paramSpecs.color('#AAAAAA')
     },
     tags: ["C"],
     plots: {
