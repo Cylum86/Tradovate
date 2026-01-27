@@ -2,7 +2,7 @@ const predef = require("./tools/predef");
 const { px, du, op } = require("./tools/graphics");
 
 // Static price levels - update these as needed
-const defaultLevelText = "PMH, 26120.25\nBBH, 26098.75\nPWH, 26045.5\nPW VAH, 26016.5\nPWO, 25949\nPW POC, 25884.75\nPDH, 25739.75\nGX H / yNH / PMO, 25731.75\nyVAH, 25713\nPW VAL, 25703\nPWC / D20, 25691.25\nyPOC, 25673.25\nPDC, 25658.25\nyVAL, 25614\nGX L, 25540.25\nyNL, 25536.75\nD5 / PDO, 25530.75\nPDL, 25483.75\nWEH, 25471\nPMC, 25456.75\nPWL, 25420.75\nBBL, 25283.75\nWEL, 25095.25\nPML, 24887.75";
+const defaultLevelText = "PMH, 26120.25\nBBH, 26087.25\nWEH / WRH, 26045.50\nPPW VAH, 26016.50\nPDNH, 25936.50\nyVAH, 25920.00\nPPW POC / yPOC, 25884.75\nPDC / PWH, 25848.50\nyVAL, 25844.50\nPW VAH, 25828.00\nWRL, 25743.50\nPWC, 25738.25\nPMO, 25732.00\nyNL / PPW VAL, 25703.00\nPW POC, 25691.50\nD20, 25686.00\nWEL, 25632.75\nPDO, 25585.50\nD5, 25569.00\nPWO, 25471.00\nPMC, 25456.75\nPDL, 25365.25\nPW VAL, 25290.00\nBBL, 25284.50\nPWL, 25025.00\nPML, 24887.75";
 
 // Configuration constants
 const TYPICAL_PRICE_DIVISOR = 3;  // For HLC/3 typical price calculation
@@ -191,11 +191,9 @@ class sethlement {
             this.ibHigh = d.high();
             this.ibLow = d.low();
             
-            // Only reset VWAP if market is active
-            if (marketActive) {
-                this.volumeSum = 0;
-                this.volumePriceSum = 0;
-            }
+            // Always reset VWAP at NYO (not just when market is active)
+            this.volumeSum = 0;
+            this.volumePriceSum = 0;
         }
 
         // During IB period, continuously update high/low
@@ -218,17 +216,19 @@ class sethlement {
             this.yibLow = null;
         }
 
-        // Anchored VWAP calculation - accumulate volume and volume-weighted price
-        const vol = d.volume();
-        const typical = (d.high() + d.low() + d.close()) / TYPICAL_PRICE_DIVISOR;
-
-        this.volumeSum = (this.volumeSum || 0) + vol;
-        this.volumePriceSum = (this.volumePriceSum || 0) + (vol * typical);
-        
-        // Calculate current VWAP value
+        // Anchored VWAP calculation - only accumulate after NYO
         let vwap = null;
-        if (this.volumeSum > 0) {
-            vwap = this.volumePriceSum / this.volumeSum;
+        if (this.nyoIndex !== null && currentIndex >= this.nyoIndex) {
+            const vol = d.volume();
+            const typical = (d.high() + d.low() + d.close()) / TYPICAL_PRICE_DIVISOR;
+
+            this.volumeSum = (this.volumeSum || 0) + vol;
+            this.volumePriceSum = (this.volumePriceSum || 0) + (vol * typical);
+            
+            // Calculate current VWAP value
+            if (this.volumeSum > 0) {
+                vwap = this.volumePriceSum / this.volumeSum;
+            }
         }
 
         // Only render labels on the last bar to avoid duplication
