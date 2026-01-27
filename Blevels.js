@@ -1,17 +1,32 @@
 const predef = require("./tools/predef");
 const { px, du, op } = require("./tools/graphics");
 
-// Static price levels - update these as needed
+// ============================================
+// COLOR DEFINITIONS
+// ============================================
+const COLORS = {
+    NYO: '#FF6666',        // New York Open
+    VWAP: '#6699FF',       // NY VWAP
+    IB: '#00FFAA',         // Initial Balance (IBH/IBL and yIBH/yIBL)
+    GX: '#a43beb',         // Globex (GXH/GXL)
+    LEVELS: '#FFD700'      // Static price levels
+};
+
+// ============================================
+// STATIC PRICE LEVELS - update these as needed
+// ============================================
 const defaultLevelText = "PMH, 26120.25\nBBH, 26087.25\nWEH / WRH, 26045.50\nPPW VAH, 26016.50\nPDNH, 25936.50\nyVAH, 25920.00\nPPW POC / yPOC, 25884.75\nPDC / PWH, 25848.50\nyVAL, 25844.50\nPW VAH, 25828.00\nWRL, 25743.50\nPWC, 25738.25\nPMO, 25732.00\nyNL / PPW VAL, 25703.00\nPW POC, 25691.50\nD20, 25686.00\nWEL, 25632.75\nPDO, 25585.50\nD5, 25569.00\nPWO, 25471.00\nPMC, 25456.75\nPDL, 25365.25\nPW VAL, 25290.00\nBBL, 25284.50\nPWL, 25025.00\nPML, 24887.75";
 
-// Configuration constants
+// ============================================
+// CONFIGURATION CONSTANTS
+// ============================================
 const TYPICAL_PRICE_DIVISOR = 3;  // For HLC/3 typical price calculation
-const MIN_VOLUME_THRESHOLD = 2;  // Minimum volume in last minute to consider market active
-const SESSION_START_HOUR = 7;  // 1800 EST = 07:00 chart time
+const MIN_VOLUME_THRESHOLD = 2;   // Minimum volume in last minute to consider market active
+const SESSION_START_HOUR = 7;     // 1800 EST = 07:00 chart time
 const SESSION_START_MINUTE = 0;
-const GX_START_HOUR = 9;  // 2000 EST = 09:00 chart time (next day)
+const GX_START_HOUR = 9;          // 2000 EST = 09:00 chart time (next day)
 const GX_START_MINUTE = 0;
-const GX_END_HOUR = 18;  // 0500 EST = 18:00 chart time (next day)
+const GX_END_HOUR = 18;           // 0500 EST = 18:00 chart time (next day)
 const GX_END_MINUTE = 0;
 
 
@@ -83,18 +98,14 @@ class sethlement {
         return price.toString();
     }
 
-    // Helper method to format VWAP (always 2 decimals)
+    // Helper method to format VWAP (respects hideDecimals setting)
     formatVWAP(price) {
-        if (this.props.HideDecimals) {
-            return Math.floor(price).toString();
-        }
-        return price.toFixed(2);
+        return this.formatPrice(price);
     }
 
     // Helper method to check if market is active by looking at recent volume
     isMarketActive(currentIndex, history, timestamp) {
         let totalVolume = 0;
-        const minVolumeThreshold = 2;
         const lookbackMinutes = 1;
         
         for (let j = 0; j < 10; j++) {
@@ -111,7 +122,7 @@ class sethlement {
             }
         }
         
-        return totalVolume > minVolumeThreshold;
+        return totalVolume > MIN_VOLUME_THRESHOLD;
     }
 
     // Convert hour and minute to comparable number (e.g., 9:30 -> 930)
@@ -240,19 +251,21 @@ class sethlement {
                     currentIndex,
                     this.nyoPrice,
                     `NYO ${this.formatPrice(this.nyoPrice)}`,
-                    '#FF6666'
+                    COLORS.NYO
                 ));
             }
             
-            // Draw Initial Balance High/Low labels (or yesterday's if today's not set yet)
-            if (this.ibHigh && this.ibLow) {
-                // Today's IB is set - show current day labels
+            // Draw Initial Balance High/Low labels
+            // Only show IB labels after IB collection is complete (10:30 EST)
+            // Show yIB labels until then
+            if (this.ibHigh && this.ibLow && !this.ibCollecting) {
+                // IB collection is complete - show today's IB labels
                 items.push(this.createLabel(
                     'label-IBH',
                     currentIndex,
                     this.ibHigh,
                     `IBH ${this.formatPrice(this.ibHigh)}`,
-                    this.props.IBColor
+                    COLORS.IB
                 ));
 
                 items.push(this.createLabel(
@@ -260,16 +273,16 @@ class sethlement {
                     currentIndex,
                     this.ibLow,
                     `IBL ${this.formatPrice(this.ibLow)}`,
-                    this.props.IBColor
+                    COLORS.IB
                 ));
             } else if (this.yibHigh && this.yibLow) {
-                // Today's IB not set yet - show yesterday's with "y" prefix
+                // IB still collecting or not started - show yesterday's IB with "y" prefix
                 items.push(this.createLabel(
                     'label-yIBH',
                     currentIndex,
                     this.yibHigh,
                     `yIBH ${this.formatPrice(this.yibHigh)}`,
-                    this.props.IBColor
+                    COLORS.IB
                 ));
 
                 items.push(this.createLabel(
@@ -277,7 +290,7 @@ class sethlement {
                     currentIndex,
                     this.yibLow,
                     `yIBL ${this.formatPrice(this.yibLow)}`,
-                    this.props.IBColor
+                    COLORS.IB
                 ));
             }
 
@@ -288,7 +301,7 @@ class sethlement {
                     currentIndex,
                     this.gxHigh,
                     `GXH ${this.formatPrice(this.gxHigh)}`,
-                    this.props.GXColor
+                    COLORS.GX
                 ));
 
                 items.push(this.createLabel(
@@ -296,7 +309,7 @@ class sethlement {
                     currentIndex,
                     this.gxLow,
                     `GXL ${this.formatPrice(this.gxLow)}`,
-                    this.props.GXColor
+                    COLORS.GX
                 ));
             }
 
@@ -307,7 +320,7 @@ class sethlement {
                     currentIndex,
                     vwap,
                     `NY ${this.formatVWAP(vwap)}`,
-                    '#6699FF'
+                    COLORS.VWAP
                 ));
             }
 
@@ -318,7 +331,7 @@ class sethlement {
                     currentIndex,
                     level.price,
                     `${level.label} ${this.formatPrice(level.price)}`,
-                    '#FFD700',
+                    COLORS.LEVELS,
                     this.props.LabelOffset
                 ));
             }
@@ -339,10 +352,8 @@ module.exports = {
     params: {
         NYOHour: predef.paramSpecs.number(22, 1, 0),
         NYOMinute: predef.paramSpecs.number(30, 1, 0),
-        LabelOffset: predef.paramSpecs.number(50, 1, 0),
-        HideDecimals: predef.paramSpecs.bool(true),
-        IBColor: predef.paramSpecs.color('#00FFAA'),
-        GXColor: predef.paramSpecs.color('#AAAAAA')
+        LabelOffset: predef.paramSpecs.number(20, 1, 0),
+        HideDecimals: predef.paramSpecs.bool(true)
     },
     tags: ["C"],
     plots: {
@@ -352,6 +363,6 @@ module.exports = {
         predef.plotters.singleline("vwapLine")
     ],
     schemeStyles: {
-        dark: { vwapLine: predef.styles.plot({ color: "#6699FF"})}
+        dark: { vwapLine: predef.styles.plot({ color: COLORS.VWAP })}
     }
 };
