@@ -15,7 +15,7 @@ const COLORS = {
 // ============================================
 // STATIC PRICE LEVELS - update these as needed
 // ============================================
-const defaultLevelText = "PPW VAH, 26489.00\nPDH, 26349.00\nyNH / PPW POC, 26301.00\nyVAH, 26219.50\nBBH, 26191.25\nPPW VAL, 26172.50\nyPOC, 26163.25\nPDC, 26156.25\nPMH / WEH / WRH, 26120.25\nyVAL / PDO, 26111.25\nyyVAH, 26099.50\nyyPOC, 26090.75\nyyVAL, 26049.50\nPDNL, 25993.25\nD5, 25894.75\nPWH, 25845.75\nPW VAH, 25828.00\nPWC, 25738.25\nPMO, 25732.00\nD20, 25717.25\nWRL, 25704.25\nPW POC, 25691.50\nPWO, 25471.00\nPMC, 25456.75\nWEL, 25365.25\nPW VAL, 25290.00\nBBL, 25243.25\nPWL, 25025.00\nPML, 24887.75";
+const defaultLevelText = "PMH, 26349.00\nBBH, 26285.75\nPWH, 26027.75\nPMC, 25670.00\nCR / WCR, 25560.00\nD20, 25537.25\nPWO, 25530.00\nPMO, 25478.50\nPDNH, 25465.25\nWEH / WRH, 25447.25\nPW VAH, 25436.75\nWCT, 25355.00\nyVAH, 25328.00\nWHVL, 25315.00\nyPOC, 25305.75\nPDC, 25288.50\nPDO, 25259.00\nCT, 25230.00\nWRL, 25198.25\nHVL / PT / WPT, 25190.00\nPWC, 25163.25\nyVAL, 25142.00\nD5, 25135.00\nPDNL, 25058.25\nPML / WPS, 25025.00\nWEL, 24955.50\nPS, 24945.00\nPW POC, 24823.75\nBBL, 24788.75\nPW VAL, 24550.25\nPWL, 24239.75";
 
 // ============================================
 // CONFIGURATION CONSTANTS
@@ -244,6 +244,8 @@ class sethlement {
 
         // Only render labels on the last bar to avoid duplication
         if (d.isLast()) {
+            const dynOffset = this.props.DynamicLabelOffset;
+            
             // Draw New York Open label
             if (this.nyoPrice !== null) {
                 items.push(this.createLabel(
@@ -251,7 +253,8 @@ class sethlement {
                     currentIndex,
                     this.nyoPrice,
                     `NYO ${this.formatPrice(this.nyoPrice)}`,
-                    COLORS.NYO
+                    COLORS.NYO,
+                    dynOffset
                 ));
             }
             
@@ -265,7 +268,8 @@ class sethlement {
                     currentIndex,
                     this.ibHigh,
                     `IBH ${this.formatPrice(this.ibHigh)}`,
-                    COLORS.IB
+                    COLORS.IB,
+                    dynOffset
                 ));
 
                 items.push(this.createLabel(
@@ -273,7 +277,8 @@ class sethlement {
                     currentIndex,
                     this.ibLow,
                     `IBL ${this.formatPrice(this.ibLow)}`,
-                    COLORS.IB
+                    COLORS.IB,
+                    dynOffset
                 ));
             } else if (this.yibHigh && this.yibLow) {
                 // IB still collecting or not started - show yesterday's IB with "y" prefix
@@ -282,7 +287,8 @@ class sethlement {
                     currentIndex,
                     this.yibHigh,
                     `yIBH ${this.formatPrice(this.yibHigh)}`,
-                    COLORS.IB
+                    COLORS.IB,
+                    dynOffset
                 ));
 
                 items.push(this.createLabel(
@@ -290,7 +296,8 @@ class sethlement {
                     currentIndex,
                     this.yibLow,
                     `yIBL ${this.formatPrice(this.yibLow)}`,
-                    COLORS.IB
+                    COLORS.IB,
+                    dynOffset
                 ));
             }
 
@@ -301,7 +308,8 @@ class sethlement {
                     currentIndex,
                     this.gxHigh,
                     `GXH ${this.formatPrice(this.gxHigh)}`,
-                    COLORS.GX
+                    COLORS.GX,
+                    dynOffset
                 ));
 
                 items.push(this.createLabel(
@@ -309,7 +317,8 @@ class sethlement {
                     currentIndex,
                     this.gxLow,
                     `GXL ${this.formatPrice(this.gxLow)}`,
-                    COLORS.GX
+                    COLORS.GX,
+                    dynOffset
                 ));
             }
 
@@ -320,7 +329,8 @@ class sethlement {
                     currentIndex,
                     vwap,
                     `NY ${this.formatVWAP(vwap)}`,
-                    COLORS.VWAP
+                    COLORS.VWAP,
+                    dynOffset
                 ));
             }
 
@@ -332,7 +342,7 @@ class sethlement {
                     level.price,
                     `${level.label} ${this.formatPrice(level.price)}`,
                     COLORS.LEVELS,
-                    this.props.LabelOffset
+                    this.props.StaticLabelOffset
                 ));
             }
         }
@@ -352,10 +362,11 @@ module.exports = {
     params: {
         NYOHour: predef.paramSpecs.number(22, 1, 0),
         NYOMinute: predef.paramSpecs.number(30, 1, 0),
-        LabelOffset: predef.paramSpecs.number(20, 1, 0),
+        StaticLabelOffset: predef.paramSpecs.number(20, 1, 0),
+        DynamicLabelOffset: predef.paramSpecs.number(10, 1, 0),
         HideDecimals: predef.paramSpecs.bool(true)
     },
-    tags: ["C"],
+    tags: ["Cylum"],
     plots: {
         vwapLine: { title: "VWAP" }
     },
